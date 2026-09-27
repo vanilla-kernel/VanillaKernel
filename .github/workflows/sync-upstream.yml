@@ -1,0 +1,62 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: '0 0 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPOSITORY: LineageOS/android_kernel_oneplus_sm8350
+  UPSTREAM_BRANCH: lineage-23.2
+  DOWNSTREAM_BRANCH: lineage-23.2
+
+jobs:
+  sync:
+    name: Merge upstream into downstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout downstream branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DOWNSTREAM_BRANCH }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge upstream branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream "https://github.com/${UPSTREAM_REPOSITORY}.git"
+          else
+            git remote add upstream "https://github.com/${UPSTREAM_REPOSITORY}.git"
+          fi
+
+          git fetch upstream "${UPSTREAM_BRANCH}"
+          git checkout "${DOWNSTREAM_BRANCH}"
+
+          if git merge-base --is-ancestor "upstream/${UPSTREAM_BRANCH}" HEAD; then
+            echo "Downstream already contains upstream/${UPSTREAM_BRANCH}; nothing to do."
+            exit 0
+          fi
+
+          if ! git merge --no-ff "upstream/${UPSTREAM_BRANCH}" -m "Merge upstream/${UPSTREAM_BRANCH} into ${DOWNSTREAM_BRANCH}"; then
+            echo "::error::Merge conflict merging upstream/${UPSTREAM_BRANCH} into ${DOWNSTREAM_BRANCH}; aborting."
+            git merge --abort || true
+            git status --porcelain
+            exit 1
+          fi
+
+      - name: Push merged downstream branch
+        run: |
+          git push origin "HEAD:${DOWNSTREAM_BRANCH}"
