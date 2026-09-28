@@ -157,3 +157,6 @@ Android.bp
 
 # Logs
 *.log
+
+# dont ignore .github
+!.github
