@@ -78,7 +78,7 @@ jobs:
     timeout-minutes: 240
     permissions:
       contents: write
-      actions: read
+      actions: write
 
     steps:
       - name: Create patch release
@@ -106,10 +106,15 @@ jobs:
           fi
 
           run_id=""
+          dispatched=false
           for i in $(seq 1 60); do
-            run_id="$(gh run list --workflow "Build Kernel" --branch "${DOWNSTREAM_BRANCH}" --limit 10 --json databaseId,headSha -q "[.[] | select(.headSha == \"${SHA}\")][0].databaseId // empty" || true)"
+            run_id="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow "Build Kernel" --branch "${DOWNSTREAM_BRANCH}" --limit 10 --json databaseId,headSha -q "[.[] | select(.headSha == \"${SHA}\")][0].databaseId // empty" || true)"
             if [ -n "$run_id" ]; then
               break
+            fi
+            if [ "$i" -eq 6 ] && [ "$dispatched" = false ]; then
+              gh workflow run --repo "${GITHUB_REPOSITORY}" "Build Kernel" --ref "${DOWNSTREAM_BRANCH}"
+              dispatched=true
             fi
             sleep 60
           done
@@ -120,21 +125,21 @@ jobs:
           fi
 
           for i in $(seq 1 120); do
-            status="$(gh run view "$run_id" --json status -q .status)"
+            status="$(gh run view --repo "${GITHUB_REPOSITORY}" "$run_id" --json status -q .status)"
             if [ "$status" = "completed" ]; then
               break
             fi
             sleep 90
           done
 
-          conclusion="$(gh run view "$run_id" --json conclusion -q .conclusion)"
+          conclusion="$(gh run view --repo "${GITHUB_REPOSITORY}" "$run_id" --json conclusion -q .conclusion)"
           if [ "$conclusion" != "success" ]; then
             echo "::error::Build run ${run_id} finished with ${conclusion}"
             exit 1
           fi
 
           rm -rf dist
-          gh run download "$run_id" -n VanillaKernel -D dist
+          gh run download --repo "${GITHUB_REPOSITORY}" "$run_id" -n VanillaKernel -D dist
           asset="$(ls dist/*.zip)"
           mv "$asset" "VanillaKernel-${next}.zip"
 
@@ -142,4 +147,4 @@ jobs:
           **Minor update:**
           - Sync kernel with lineageos upstream"
 
-          gh release create "$next" --title "V${next}" --notes "$body" --target "${SHA}" "VanillaKernel-${next}.zip"
+          gh release create --repo "${GITHUB_REPOSITORY}" "$next" --title "V${next}" --notes "$body" --target "${SHA}" "VanillaKernel-${next}.zip"
