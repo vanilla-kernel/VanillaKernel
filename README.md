@@ -1,4 +1,4 @@
-![Banner](banner.png)
+![Banner](banner.svg)
 # Vanilla Kernel - Magiskless experience
 
 Project to add **VanillaSU** (a KernelSU fork with **SUSFS**) and **useful patches** to **LineageOS** without losing vanilla for OnePlus 9 Pro
