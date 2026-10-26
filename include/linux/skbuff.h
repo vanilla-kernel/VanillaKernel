@@ -763,7 +763,7 @@ struct sk_buff {
 				peeked:1,
 				head_frag:1,
 				pfmemalloc:1;
-#ifdef CONFIG_SKB_EXTENSIONS
+#if defined(CONFIG_SKB_EXTENSIONS) && !defined(__GENKSYMS__)
 	__u8			active_extensions;
 #endif
 	/* fields enclosed in headers_start/headers_end are copied
@@ -905,7 +905,11 @@ struct sk_buff {
 				__u16 android_kabi_reserved1_padding2;
 				__u32 android_kabi_reserved1_padding3;
 				});
+#ifdef CONFIG_SKB_EXTENSIONS
+	ANDROID_KABI_USE(2, struct skb_ext *extensions);
+#else
 	ANDROID_KABI_RESERVE(2);
+#endif
 
 	/* These elements must be at the end, see alloc_skb() for details.  */
 	sk_buff_data_t		tail;
@@ -914,11 +918,6 @@ struct sk_buff {
 				*data;
 	unsigned int		truesize;
 	refcount_t		users;
-
-#ifdef CONFIG_SKB_EXTENSIONS
-	/* only useable after checking ->active_extensions != 0 */
-	struct skb_ext		*extensions;
-#endif
 };
 
 #ifdef __KERNEL__

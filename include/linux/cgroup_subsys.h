@@ -29,10 +29,6 @@ SUBSYS(io)
 SUBSYS(memory)
 #endif
 
-#if IS_ENABLED(CONFIG_CGROUP_DEVICE)
-SUBSYS(devices)
-#endif
-
 #if IS_ENABLED(CONFIG_CGROUP_FREEZER)
 SUBSYS(freezer)
 #endif
@@ -53,12 +49,16 @@ SUBSYS(net_prio)
 SUBSYS(hugetlb)
 #endif
 
-#if IS_ENABLED(CONFIG_CGROUP_PIDS)
-SUBSYS(pids)
-#endif
-
 #if IS_ENABLED(CONFIG_CGROUP_RDMA)
 SUBSYS(rdma)
+#endif
+
+#if IS_ENABLED(CONFIG_CGROUP_DEVICE) && !defined(__GENKSYMS__)
+SUBSYS(devices)
+#endif
+
+#if IS_ENABLED(CONFIG_CGROUP_PIDS) && !defined(__GENKSYMS__)
+SUBSYS(pids)
 #endif
 
 /*
