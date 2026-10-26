@@ -53,11 +53,11 @@ SUBSYS(hugetlb)
 SUBSYS(rdma)
 #endif
 
-#if IS_ENABLED(CONFIG_CGROUP_DEVICE) && !defined(__GENKSYMS__)
+#if IS_ENABLED(CONFIG_CGROUP_DEVICE)
 SUBSYS(devices)
 #endif
 
-#if IS_ENABLED(CONFIG_CGROUP_PIDS) && !defined(__GENKSYMS__)
+#if IS_ENABLED(CONFIG_CGROUP_PIDS)
 SUBSYS(pids)
 #endif
 
