@@ -8,7 +8,7 @@ Project to add **VanillaSU** (a KernelSU fork with **SUSFS**) and **useful patch
 - **Base:** Linux 5.4.302, LineageOS source for OnePlus 9 Pro (`sm8350` / `lahaina`)
 - **Root:** [VanillaSU](https://github.com/vanilla-kernel/VanillaSU) - a KernelSU-Next fork, vendored as the `KernelSU` submodule
 - **SUSFS:** mount/kstat/uname spoofing and related hiding features enabled
-- **Packaging:** flashable AnyKernel3 zip, SmartPack-Kernel Manager update channel
+- **Packaging:** flashable AnyKernel3 zip
 
 ## Warning
 Installing kernels older than 2.1.1 causes bootloop in the system and recovery due to upstream updates
@@ -63,8 +63,7 @@ workflow artifact.
 
 ## Installation
 
-Flash the resulting `VanillaKernel-*.zip` from a custom recovery, or via the
-SmartPack-Kernel Manager update channel (see `smartpack/update.json`).
+Flash the resulting `VanillaKernel-*.zip` from a custom recovery.
 
 ## Credits
 
