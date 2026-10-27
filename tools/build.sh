@@ -12,7 +12,6 @@ COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 MAIN_BRANCH="lineage-24.0"
 
-# Route clang through ccache when it is available to speed up rebuilds
 if command -v ccache >/dev/null 2>&1; then
 	CC_WRAPPER="ccache "
 else
