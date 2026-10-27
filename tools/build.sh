@@ -10,6 +10,8 @@ THREADS=$(nproc --all)
 RAW_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
+MAIN_BRANCH="lineage-24.0"
+
 # Route clang through ccache when it is available to speed up rebuilds
 if command -v ccache >/dev/null 2>&1; then
 	CC_WRAPPER="ccache "
@@ -18,7 +20,7 @@ else
 fi
 
 case "$RAW_BRANCH" in
-	lineage-24.0) BRANCH="stable" ;;
+	$MAIN_BRANCH) BRANCH="stable" ;;
 	*)            BRANCH="unstable" ;;
 esac
 
