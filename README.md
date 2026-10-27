@@ -6,7 +6,7 @@ Project to add **VanillaSU** (a KernelSU fork with **SUSFS**) and **useful patch
 ## Features
 
 - **Base:** Linux 5.4.302, LineageOS source for OnePlus 9 Pro (`sm8350` / `lahaina`)
-- **Root:** [VanillaSU](https://github.com/vanilla-kernel/VanillaSU) - a KernelSU-Next fork, vendored as the `KernelSU` submodule
+- **Root:** [VanillaSU](https://github.com/vanilla-kernel/VanillaSU) - a KernelSU-Next fork, vendored as the `VanillaSU` submodule
 - **SUSFS:** mount/kstat/uname spoofing and related hiding features enabled
 - **Packaging:** flashable AnyKernel3 zip, SmartPack-Kernel Manager update channel
 
@@ -38,7 +38,7 @@ export PATH="$HOME/clang/bin:$PATH"
 
 ## Building
 
-Make sure the `KernelSU` submodule is checked out first:
+Make sure the `VanillaSU` submodule is checked out first:
 
 ```bash
 git submodule update --init --recursive

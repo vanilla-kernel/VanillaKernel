@@ -1,4 +1,4 @@
-[submodule "KernelSU"]
+[submodule "VanillaSU"]
 	path = VanillaSU
 	url = https://github.com/vanilla-kernel/VanillaSU.git
 	branch = sync-upstream-31.09
