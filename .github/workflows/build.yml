@@ -48,6 +48,7 @@ jobs:
       duration: ${{ steps.duration.outputs.duration }}
       repo_url: ${{ steps.meta.outputs.repo_url }}
       vanillasu_hash: ${{ steps.meta.outputs.vanillasu_hash }}
+      submodule_hash: ${{ steps.meta.outputs.submodule_hash }}
 
     steps:
       - name: Checkout sources
@@ -55,50 +56,62 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Prepare KernelSU metadata
+      - name: Prepare submodule metadata
         env:
           DISPATCH_BRANCH: ${{ github.event.client_payload.branch || '' }}
-          VANILLASU_SHA: ${{ github.event.client_payload.sha || github.event.client_payload.vanillasu_sha || github.event.inputs.vanillasu_sha || '' }}
+          SUBMODULE_SHA: ${{ github.event.client_payload.sha || github.event.client_payload.vanillasu_sha || github.event.client_payload.submodule_sha || github.event.inputs.submodule_sha || github.event.inputs.vanillasu_sha || '' }}
         run: |
-          if [ ! -d KernelSU ]; then
-            echo "::error::KernelSU submodule is missing"
+          read -r key submodule_path < <(git config --file .gitmodules --get-regexp '\.path$' | head -n 1)
+          submodule_name="${key#submodule.}"
+          submodule_name="${submodule_name%.path}"
+
+          if [ -z "$submodule_path" ] || [ ! -d "$submodule_path" ]; then
+            echo "::error::Submodule directory '${submodule_path}' is missing"
             exit 1
           fi
 
-          git submodule sync -- KernelSU
+          echo "SUBMODULE_PATH=${submodule_path}" >> "$GITHUB_ENV"
 
-          vanillasu_url="$(git config --file .gitmodules --get submodule.KernelSU.url)"
-          vanillasu_branch="${DISPATCH_BRANCH:-$(git config --file .gitmodules --get submodule.KernelSU.branch || true)}"
-          vanillasu_branch="${vanillasu_branch:-legacy-susfs}"
+          git submodule sync -- "$submodule_path"
 
-          if [ "$(git -C KernelSU rev-parse --is-shallow-repository)" = "true" ]; then
-            git -C KernelSU fetch --unshallow --tags --force "$vanillasu_url" "$vanillasu_branch"
+          submodule_url="$(git config --file .gitmodules --get "submodule.${submodule_name}.url")"
+          submodule_branch="${DISPATCH_BRANCH:-$(git config --file .gitmodules --get "submodule.${submodule_name}.branch" || true)}"
+          submodule_branch="${submodule_branch:-legacy-susfs}"
+
+          if [ "$(git -C "$submodule_path" rev-parse --is-shallow-repository)" = "true" ]; then
+            git -C "$submodule_path" fetch --unshallow --tags --force "$submodule_url" "$submodule_branch"
           else
-            git -C KernelSU fetch --tags --force "$vanillasu_url" "$vanillasu_branch"
+            git -C "$submodule_path" fetch --tags --force "$submodule_url" "$submodule_branch"
           fi
 
-          if [ -n "$VANILLASU_SHA" ]; then
-            if ! git -C KernelSU cat-file -e "${VANILLASU_SHA}^{commit}" 2>/dev/null; then
-              echo "::error::VanillaSU commit not found on ${vanillasu_branch}: ${VANILLASU_SHA}"
+          if [ -n "$SUBMODULE_SHA" ]; then
+            if ! git -C "$submodule_path" cat-file -e "${SUBMODULE_SHA}^{commit}" 2>/dev/null; then
+              echo "::error::Submodule commit not found on ${submodule_branch}: ${SUBMODULE_SHA}"
               exit 1
             fi
 
-            git -C KernelSU checkout --detach "$VANILLASU_SHA"
-            vanillasu_short="$(git -C KernelSU rev-parse --short HEAD)"
-            echo "ARTIFACT=VanillaKernel-${GITHUB_SHA}-${vanillasu_short}.zip" >> "$GITHUB_ENV"
+            git -C "$submodule_path" checkout --detach "$SUBMODULE_SHA"
+            submodule_short="$(git -C "$submodule_path" rev-parse --short HEAD)"
+            echo "ARTIFACT=VanillaKernel-${GITHUB_SHA}-${submodule_short}.zip" >> "$GITHUB_ENV"
           fi
 
       - name: Capture build metadata
         id: meta
         run: |
           start_time="$(date +%s)"
+          submodule_path="${SUBMODULE_PATH:-$(git config --file .gitmodules --get-regexp '\.path$' | awk '{print $2}' | head -n 1)}"
+          submodule_hash=""
+          if [ -n "$submodule_path" ] && [ -d "$submodule_path" ]; then
+            submodule_hash="$(git -C "$submodule_path" rev-parse --short HEAD)"
+          fi
 
           {
             echo "artifact=${ARTIFACT}"
             echo "commit_hash=$(git rev-parse --short HEAD)"
             echo "commit_msg=$(git log -1 --pretty=%s)"
             echo "repo_url=${REPO_URL}"
-            echo "vanillasu_hash=$(git -C KernelSU rev-parse --short HEAD)"
+            echo "vanillasu_hash=${submodule_hash}"
+            echo "submodule_hash=${submodule_hash}"
           } >> "$GITHUB_OUTPUT"
 
           echo "START_TIME=${start_time}" >> "$GITHUB_ENV"
