@@ -347,13 +347,6 @@ struct net_bridge {
 #endif
 
 	struct rhashtable		fdb_hash_tbl;
-#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
-	union {
-		struct rtable		fake_rtable;
-		struct rt6_info		fake_rt6_info;
-	};
-	u32				metrics[RTAX_MAX];
-#endif
 	u16				group_fwd_mask;
 	u16				group_fwd_mask_required;
 
@@ -429,6 +422,13 @@ struct net_bridge {
 	int offload_fwd_mark;
 #endif
 	struct hlist_head		fdb_list;
+#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER) && !defined(__GENKSYMS__)
+	union {
+		struct rtable		fake_rtable;
+		struct rt6_info		fake_rt6_info;
+	};
+	u32				metrics[RTAX_MAX];
+#endif
 };
 
 struct br_input_skb_cb {
