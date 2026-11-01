@@ -173,9 +173,6 @@ struct net {
 
 	atomic64_t		net_cookie; /* written once */
 
-#if IS_ENABLED(CONFIG_IP_VS)
-	struct netns_ipvs	*ipvs;
-#endif
 #if IS_ENABLED(CONFIG_MPLS)
 	struct netns_mpls	mpls;
 #endif
@@ -189,6 +186,9 @@ struct net {
 	struct sock		*crypto_nlsk;
 #endif
 	struct sock		*diag_nlsk;
+#if IS_ENABLED(CONFIG_IP_VS) && !defined(__GENKSYMS__)
+	struct netns_ipvs	*ipvs;
+#endif
 } __randomize_layout;
 
 #include <linux/seq_file_net.h>

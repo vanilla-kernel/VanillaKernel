@@ -221,11 +221,12 @@ jobs:
           done
           pahole -C skb_ext out/vmlinux > "$RUNNER_TEMP/abi/skb_ext.txt"
           pahole -C net_bridge out/vmlinux > "$RUNNER_TEMP/abi/net_bridge.txt"
+          pahole -C net out/vmlinux > "$RUNNER_TEMP/abi/net.txt"
 
       - name: Build baseline without container options
         if: github.ref_name == 'feat/bridge_netfilter_parameter'
         run: |
-          scripts/config --file out/.config -d BRIDGE_NETFILTER -d CGROUP_PIDS -d CGROUP_DEVICE -d IP_VS -d NETFILTER_XT_MATCH_IPVS
+          scripts/config --file out/.config -d BRIDGE_NETFILTER -d CGROUP_PIDS -d CGROUP_DEVICE -d IP6_NF_NAT -d IP6_NF_TARGET_MASQUERADE -d IP_VS -d NETFILTER_XT_MATCH_IPVS
           make O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip CLANG_TRIPLE=aarch64-linux-gnu- olddefconfig
           ./tools/build.sh kernel
           mkdir -p "$RUNNER_TEMP/abi/baseline"
@@ -235,6 +236,7 @@ jobs:
           done
           pahole -C skb_ext out/vmlinux > "$RUNNER_TEMP/abi/baseline/skb_ext.txt"
           pahole -C net_bridge out/vmlinux > "$RUNNER_TEMP/abi/baseline/net_bridge.txt"
+          pahole -C net out/vmlinux > "$RUNNER_TEMP/abi/baseline/net.txt"
 
       - name: Upload ABI evidence
         uses: actions/upload-artifact@v4
