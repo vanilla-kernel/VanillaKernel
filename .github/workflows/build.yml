@@ -219,6 +219,7 @@ jobs:
           for type in sk_buff css_set cgroup; do
             pahole -C "$type" out/vmlinux > "$RUNNER_TEMP/abi/${type}.txt"
           done
+          pahole -C skb_ext out/vmlinux > "$RUNNER_TEMP/abi/skb_ext.txt"
 
       - name: Build baseline without container options
         if: github.ref_name == 'feat/bridge_netfilter_parameter'
@@ -231,6 +232,7 @@ jobs:
           for type in sk_buff css_set cgroup; do
             pahole -C "$type" out/vmlinux > "$RUNNER_TEMP/abi/baseline/${type}.txt"
           done
+          pahole -C skb_ext out/vmlinux > "$RUNNER_TEMP/abi/baseline/skb_ext.txt"
 
       - name: Upload ABI evidence
         uses: actions/upload-artifact@v4
