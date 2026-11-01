@@ -269,6 +269,24 @@ jobs:
           print(f'Baseline: {len(baseline)}, missing: {len(missing)}, changed: {len(changed)}')
           if missing or changed:
               sys.exit(1)
+          import re
+          def members(name):
+              lines = (root / name).read_text().splitlines()
+              result = []
+              for line in lines:
+                  match = re.match(r'^\t([^\t].*?);\s*/\*\s*(\d+)\s+(\d+)\s*\*/', line)
+                  if match:
+                      result.append((match.group(1).strip(), int(match.group(2)), int(match.group(3))))
+              return result
+
+          for name in ('net.txt', 'net_bridge.txt', 'skb_ext.txt', 'sk_buff.txt', 'css_set.txt', 'cgroup.txt'):
+              old = members('baseline/' + name)
+              new = members(name)
+              missing_members = [member for member in old if member not in new]
+              print(f'{name}: {len(old)} baseline members, {len(missing_members)} changed')
+              if not old or missing_members:
+                  print(missing_members)
+                  sys.exit(1)
           PY
 
       - name: Pack AnyKernel3 zip
