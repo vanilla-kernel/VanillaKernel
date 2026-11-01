@@ -220,6 +220,18 @@ jobs:
             pahole -C "$type" out/vmlinux > "$RUNNER_TEMP/abi/${type}.txt"
           done
 
+      - name: Build baseline without container options
+        if: github.ref_name == 'feat/bridge_netfilter_parameter'
+        run: |
+          scripts/config --file out/.config -d BRIDGE_NETFILTER -d CGROUP_PIDS -d CGROUP_DEVICE
+          make O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip CLANG_TRIPLE=aarch64-linux-gnu- olddefconfig
+          ./tools/build.sh kernel
+          mkdir -p "$RUNNER_TEMP/abi/baseline"
+          cp out/Module.symvers out/.config "$RUNNER_TEMP/abi/baseline/"
+          for type in sk_buff css_set cgroup; do
+            pahole -C "$type" out/vmlinux > "$RUNNER_TEMP/abi/baseline/${type}.txt"
+          done
+
       - name: Upload ABI evidence
         uses: actions/upload-artifact@v4
         with:
