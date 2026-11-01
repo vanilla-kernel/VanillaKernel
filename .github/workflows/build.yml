@@ -124,6 +124,7 @@ jobs:
             binutils-aarch64-linux-gnu \
             bison \
             ccache \
+            dwarves \
             flex \
             gcc-aarch64-linux-gnu \
             libelf-dev \
@@ -210,6 +211,22 @@ jobs:
           fi
 
           ccache -s | tee -a "$BUILD_LOG"
+
+      - name: Collect ABI evidence
+        run: |
+          mkdir -p "$RUNNER_TEMP/abi"
+          cp out/Module.symvers out/.config "$RUNNER_TEMP/abi/"
+          for type in sk_buff css_set cgroup; do
+            pahole -C "$type" out/vmlinux > "$RUNNER_TEMP/abi/${type}.txt"
+          done
+
+      - name: Upload ABI evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-abi
+          path: ${{ runner.temp }}/abi/
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Pack AnyKernel3 zip
         run: |
