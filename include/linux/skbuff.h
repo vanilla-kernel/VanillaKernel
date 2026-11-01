@@ -4202,7 +4202,7 @@ enum skb_ext_id {
 #if IS_ENABLED(CONFIG_NET_TC_SKB_EXT)
 	TC_SKB_EXT,
 #endif
-#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER) && !defined(__GENKSYMS__)
 	SKB_EXT_BRIDGE_NF,
 #endif
 	SKB_EXT_NUM, /* must be last */
@@ -4220,10 +4220,25 @@ enum skb_ext_id {
  */
 struct skb_ext {
 	refcount_t refcnt;
+#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER) && !defined(__GENKSYMS__)
+	u8 offset[SKB_EXT_NUM - 1];
+	u8 chunks;
+	u8 bridge_offset;
+#else
 	u8 offset[SKB_EXT_NUM]; /* in chunks of 8 bytes */
 	u8 chunks;		/* same */
+#endif
 	char data[0] __aligned(8);
 };
+
+static inline u8 *skb_ext_offset(struct skb_ext *ext, enum skb_ext_id id)
+{
+#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+	if (id == SKB_EXT_BRIDGE_NF)
+		return &ext->bridge_offset;
+#endif
+	return &ext->offset[id];
+}
 
 void *skb_ext_add(struct sk_buff *skb, enum skb_ext_id id);
 void __skb_ext_del(struct sk_buff *skb, enum skb_ext_id id);
@@ -4254,9 +4269,9 @@ static inline void skb_ext_copy(struct sk_buff *dst, const struct sk_buff *src)
 	__skb_ext_copy(dst, src);
 }
 
-static inline bool __skb_ext_exist(const struct skb_ext *ext, enum skb_ext_id i)
+static inline bool __skb_ext_exist(struct skb_ext *ext, enum skb_ext_id i)
 {
-	return !!ext->offset[i];
+	return !!*skb_ext_offset(ext, i);
 }
 
 static inline bool skb_ext_exist(const struct sk_buff *skb, enum skb_ext_id id)
@@ -4275,7 +4290,7 @@ static inline void *skb_ext_find(const struct sk_buff *skb, enum skb_ext_id id)
 	if (skb_ext_exist(skb, id)) {
 		struct skb_ext *ext = skb->extensions;
 
-		return (void *)ext + (ext->offset[id] << 3);
+		return (void *)ext + (*skb_ext_offset(ext, id) << 3);
 	}
 
 	return NULL;

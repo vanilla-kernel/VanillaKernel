@@ -4350,6 +4350,10 @@ static void skb_extensions_init(void)
 {
 	BUILD_BUG_ON(SKB_EXT_NUM >= 8);
 	BUILD_BUG_ON(skb_ext_total_length() > 255);
+#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+	BUILD_BUG_ON(offsetof(struct skb_ext, bridge_offset) >=
+		     offsetof(struct skb_ext, data));
+#endif
 
 	skbuff_ext_cache = kmem_cache_create("skbuff_ext_cache",
 					     SKB_EXT_ALIGN_VALUE * skb_ext_total_length(),
@@ -6280,7 +6284,7 @@ void skb_condense(struct sk_buff *skb)
 #ifdef CONFIG_SKB_EXTENSIONS
 static void *skb_ext_get_ptr(struct skb_ext *ext, enum skb_ext_id id)
 {
-	return (void *)ext + (ext->offset[id] * SKB_EXT_ALIGN_VALUE);
+	return (void *)ext + (*skb_ext_offset(ext, id) * SKB_EXT_ALIGN_VALUE);
 }
 
 static struct skb_ext *skb_ext_alloc(void)
@@ -6289,6 +6293,9 @@ static struct skb_ext *skb_ext_alloc(void)
 
 	if (new) {
 		memset(new->offset, 0, sizeof(new->offset));
+#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
+		new->bridge_offset = 0;
+#endif
 		refcount_set(&new->refcnt, 1);
 	}
 
@@ -6363,7 +6370,7 @@ void *skb_ext_add(struct sk_buff *skb, enum skb_ext_id id)
 
 	newlen = newoff + skb_ext_type_len[id];
 	new->chunks = newlen;
-	new->offset[id] = newoff;
+	*skb_ext_offset(new, id) = newoff;
 set_active:
 	skb->extensions = new;
 	skb->active_extensions |= 1 << id;
