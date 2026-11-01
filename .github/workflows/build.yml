@@ -229,6 +229,7 @@ jobs:
           retention-days: 14
 
       - name: Pack AnyKernel3 zip
+        if: github.ref_name != 'feat/bridge_netfilter_parameter'
         run: |
           if [ ! -f "$IMAGE" ]; then
             echo "::error::Kernel image not found at $IMAGE"
@@ -248,6 +249,7 @@ jobs:
           )
 
       - name: Upload kernel artifact
+        if: github.ref_name != 'feat/bridge_netfilter_parameter'
         uses: actions/upload-artifact@v4
         with:
           name: VanillaKernel
@@ -278,7 +280,7 @@ jobs:
     name: Notify Telegram
     runs-on: ubuntu-22.04
     needs: build
-    if: always()
+    if: always() && github.ref_name != 'feat/bridge_netfilter_parameter'
     timeout-minutes: 10
 
     steps:
