@@ -124,7 +124,6 @@ jobs:
             binutils-aarch64-linux-gnu \
             bison \
             ccache \
-            dwarves \
             flex \
             gcc-aarch64-linux-gnu \
             libelf-dev \
@@ -212,85 +211,7 @@ jobs:
 
           ccache -s | tee -a "$BUILD_LOG"
 
-      - name: Collect ABI evidence
-        run: |
-          mkdir -p "$RUNNER_TEMP/abi"
-          cp out/Module.symvers out/.config "$RUNNER_TEMP/abi/"
-          for type in sk_buff css_set cgroup; do
-            pahole -C "$type" out/vmlinux > "$RUNNER_TEMP/abi/${type}.txt"
-          done
-          pahole -C skb_ext out/vmlinux > "$RUNNER_TEMP/abi/skb_ext.txt"
-          pahole -C net_bridge out/vmlinux > "$RUNNER_TEMP/abi/net_bridge.txt"
-          pahole -C net out/vmlinux > "$RUNNER_TEMP/abi/net.txt"
-
-      - name: Build baseline without container options
-        if: github.ref_name == 'feat/bridge_netfilter_parameter'
-        run: |
-          scripts/config --file out/.config -d BRIDGE_NETFILTER -d CGROUP_PIDS -d CGROUP_DEVICE -d IP6_NF_NAT -d IP6_NF_TARGET_MASQUERADE -d IP_VS -d NETFILTER_XT_MATCH_IPVS
-          make O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip CLANG_TRIPLE=aarch64-linux-gnu- olddefconfig
-          ./tools/build.sh kernel
-          mkdir -p "$RUNNER_TEMP/abi/baseline"
-          cp out/Module.symvers out/.config "$RUNNER_TEMP/abi/baseline/"
-          for type in sk_buff css_set cgroup; do
-            pahole -C "$type" out/vmlinux > "$RUNNER_TEMP/abi/baseline/${type}.txt"
-          done
-          pahole -C skb_ext out/vmlinux > "$RUNNER_TEMP/abi/baseline/skb_ext.txt"
-          pahole -C net_bridge out/vmlinux > "$RUNNER_TEMP/abi/baseline/net_bridge.txt"
-          pahole -C net out/vmlinux > "$RUNNER_TEMP/abi/baseline/net.txt"
-
-      - name: Upload ABI evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: kernel-abi
-          path: ${{ runner.temp }}/abi/
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Compare ABI evidence
-        if: github.ref_name == 'feat/bridge_netfilter_parameter'
-        run: |
-          python3 - "$RUNNER_TEMP/abi" <<'PY'
-          import pathlib
-          import sys
-
-          root = pathlib.Path(sys.argv[1])
-          def symbols(path):
-              return {tuple(fields[1:3]): fields[0] for line in path.read_text().splitlines() if len(fields := line.split()) >= 4}
-
-          baseline = symbols(root / 'baseline/Module.symvers')
-          candidate = symbols(root / 'Module.symvers')
-          missing = baseline.keys() - candidate.keys()
-          changed = {key for key in baseline.keys() & candidate.keys() if baseline[key] != candidate[key]}
-          for key in sorted(missing):
-              print('Missing:', *key)
-          for key in sorted(changed):
-              print('Changed:', *key, baseline[key], candidate[key])
-          print(f'Baseline: {len(baseline)}, missing: {len(missing)}, changed: {len(changed)}')
-          if missing or changed:
-              sys.exit(1)
-          import re
-          def members(name):
-              lines = (root / name).read_text().splitlines()
-              result = []
-              for line in lines:
-                  match = re.match(r'^\t([^\t].*?);\s*/\*\s*(\d+)\s+(\d+)\s*\*/', line)
-                  if match:
-                      result.append((match.group(1).strip(), int(match.group(2)), int(match.group(3))))
-              return result
-
-          for name in ('net.txt', 'net_bridge.txt', 'skb_ext.txt', 'sk_buff.txt', 'css_set.txt', 'cgroup.txt'):
-              old = members('baseline/' + name)
-              new = members(name)
-              missing_members = [member for member in old if member not in new]
-              print(f'{name}: {len(old)} baseline members, {len(missing_members)} changed')
-              if not old or missing_members:
-                  print(missing_members)
-                  sys.exit(1)
-          PY
-
       - name: Pack AnyKernel3 zip
-        if: github.ref_name != 'feat/bridge_netfilter_parameter'
         run: |
           if [ ! -f "$IMAGE" ]; then
             echo "::error::Kernel image not found at $IMAGE"
@@ -310,7 +231,6 @@ jobs:
           )
 
       - name: Upload kernel artifact
-        if: github.ref_name != 'feat/bridge_netfilter_parameter'
         uses: actions/upload-artifact@v4
         with:
           name: VanillaKernel
@@ -341,7 +261,7 @@ jobs:
     name: Notify Telegram
     runs-on: ubuntu-22.04
     needs: build
-    if: always() && github.ref_name != 'feat/bridge_netfilter_parameter'
+    if: always()
     timeout-minutes: 10
 
     steps:
